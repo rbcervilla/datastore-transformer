@@ -55,7 +55,7 @@ func (d *Doer) Do(ctx context.Context) error {
 		w := &worker{
 			wg:           &d.wg,
 			cli:          d.cli,
-			jobs:         d.tasks,
+			tasks:        d.tasks,
 			transformers: d.transformers,
 		}
 		w.Run(ctx)
@@ -89,7 +89,7 @@ func (d *Doer) Do(ctx context.Context) error {
 type worker struct {
 	wg           *sync.WaitGroup
 	cli          *datastore.Client
-	jobs         <-chan *Entity
+	tasks        <-chan *Entity
 	transformers []Transformer
 }
 
@@ -102,16 +102,16 @@ func (w *worker) Run(ctx context.Context) {
 			select {
 			case <-ctx.Done():
 				return
-			case job, ok := <-w.jobs:
+			case task, ok := <-w.tasks:
 
 				if !ok {
 					return
 				}
 
 				for _, t := range w.transformers {
-					t.Transform(job)
+					t.Transform(task)
 				}
-				if _, err := w.cli.Put(ctx, job.key, job); err != nil {
+				if _, err := w.cli.Put(ctx, task.key, task); err != nil {
 					// TODO send to error channel
 					fmt.Println(err.Error())
 				}
