@@ -21,8 +21,8 @@ func main() {
 	ctx := context.Background()
 	cli, _ := datastore.NewClient(ctx, "project-id")
 
-	tr := transformer.New(cli, datastore.NewQuery("KindToTransform"))
-
+	tr, _ := transformer.New(cli, datastore.NewQuery("KindToTransform"))
+	
 	tr.Apply(
 		transformer.RemoveField("OldField"),
 		transformer.SetField("NewField", 1, true))

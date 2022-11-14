@@ -9,13 +9,20 @@ import (
 	"sync"
 )
 
-// New creates a new Doer
-func New(cli *datastore.Client, query *datastore.Query) *Doer {
-	return &Doer{
-		cli:      cli,
-		query:    query,
-		nWorkers: 5, // TODO to config
+// New creates a new transformer Doer
+func New(cli *datastore.Client, query *datastore.Query, opts ...Option) (*Doer, error) {
+	d := &Doer{
+		cli:     cli,
+		query:   query,
+		workers: 1,
+		tasks:   make(chan *Entity),
 	}
+	for _, opt := range opts {
+		if err := opt(d); err != nil {
+			return nil, err
+		}
+	}
+	return d, nil
 }
 
 // Doer runs the query and sends to the workers the entities
@@ -23,10 +30,10 @@ func New(cli *datastore.Client, query *datastore.Query) *Doer {
 type Doer struct {
 	cli          *datastore.Client
 	query        *datastore.Query
-	nWorkers     int
-	wg           sync.WaitGroup
 	transformers []Transformer
-	jobs         chan *Entity
+	workers      int
+	wg           sync.WaitGroup
+	tasks        chan *Entity
 }
 
 // Apply adds Transformer to be applied to an Entity
@@ -37,20 +44,18 @@ func (d *Doer) Apply(t ...Transformer) {
 // Do queries the entities and sends to the workers
 func (d *Doer) Do(ctx context.Context) error {
 
-	d.jobs = make(chan *Entity)
-
 	defer func() {
-		close(d.jobs)
+		close(d.tasks)
 		d.wg.Wait()
 	}()
 
 	// Init workers
-	d.wg.Add(d.nWorkers)
-	for i := 0; i < d.nWorkers; i++ {
+	d.wg.Add(d.workers)
+	for i := 0; i < d.workers; i++ {
 		w := &worker{
 			wg:           &d.wg,
 			cli:          d.cli,
-			jobs:         d.jobs,
+			jobs:         d.tasks,
 			transformers: d.transformers,
 		}
 		w.Run(ctx)
@@ -71,7 +76,7 @@ func (d *Doer) Do(ctx context.Context) error {
 
 		// Send to workers
 		select {
-		case d.jobs <- entity:
+		case d.tasks <- entity:
 		case <-ctx.Done():
 			return ctx.Err()
 		}
