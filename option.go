@@ -15,3 +15,10 @@ func WithConcurrency(c int) Option {
 		return nil
 	}
 }
+
+func WithFailOnError(v bool) Option {
+	return func(d *Doer) error {
+		d.failOnErr = v
+		return nil
+	}
+}
