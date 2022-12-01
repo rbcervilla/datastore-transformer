@@ -162,7 +162,7 @@ func (w *worker) process(ctx context.Context, task *Entity) error {
 			return err
 		}
 	}
-	if _, err := w.cli.Put(ctx, task.key, task); err != nil {
+	if _, err := w.cli.Put(ctx, task.Key, task); err != nil {
 		return err
 	}
 	return nil

@@ -4,17 +4,17 @@ import "cloud.google.com/go/datastore"
 
 var _ datastore.KeyLoader = &Entity{}
 
-// Entity contains key and properties of a datastore entity
+// Entity contains Key and properties of a datastore entity
 //
 // Implements datastore.KeyLoader in order to Load and Save
 // the entity.
 type Entity struct {
-	key        *datastore.Key
+	Key        *datastore.Key
 	Properties map[string]datastore.Property
 }
 
 func (e *Entity) LoadKey(k *datastore.Key) error {
-	e.key = k
+	e.Key = k
 	return nil
 }
 
